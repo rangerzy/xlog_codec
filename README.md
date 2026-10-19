@@ -112,3 +112,10 @@ Windows 运行时将本包 `bin` 加入 PATH；同时需要匹配的 GCC 运行�
 本工程不静态捆绑 GCC 运行库，也不承诺未经验证的旧版 macOS 兼容性。
 
 CTest 验证 C/C++11 调用、各包移动至含空格新路径后的 C/C++11 消费，macOS 还检查实际加载的 dylib 路径。
+
+## 持续集成
+
+推送 `main`、向 `main` 提交 PR 或手动触发时，GitHub Actions 使用
+`windows-2025` 与 MSYS2 UCRT64 运行 Windows Release 配置、构建、产物布局检查和完整 CTest。
+工作流记录实际 GCC/CMake/Ninja 版本；未达到工具链最低要求时配置会失败。
+可在仓库 Actions 页面查看运行结果。

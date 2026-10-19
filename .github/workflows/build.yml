@@ -1,0 +1,52 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64 UCRT64 GCC 16
+    runs-on: windows-2025
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+      - name: Record toolchain
+        run: |
+          gcc --version
+          g++ --version
+          cmake --version
+          ninja --version
+          pacman -Q mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+      - name: Configure
+        run: cmake --preset windows-x64-mingw-release
+      - name: Build libraries and packages
+        run: cmake --build --preset windows-x64-mingw-release
+      - name: Check DLL and import library layout
+        run: |
+          for project in xlog_encode xlog_decode; do
+            prefix="build/windows-x64-mingw-release/outputs/windows-x64-mingw/$project"
+            test -f "$prefix/bin/lib${project}.dll"
+            test -f "$prefix/lib/lib${project}.dll.a"
+            test -f "$prefix/include/$project/$project.h"
+            test -f "$prefix/doc/README.md"
+          done
+      - name: Test C ABI and relocated packages
+        run: ctest --test-dir build/windows-x64-mingw-release --output-on-failure --no-tests=error
