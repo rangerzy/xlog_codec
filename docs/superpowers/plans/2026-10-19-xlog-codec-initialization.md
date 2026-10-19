@@ -93,16 +93,16 @@
 - Consumes: 前两任务的 presets、CTest、分发目录及已确认 GitHub 目标。
 - Produces: Windows UCRT64 GCC 16 Release 构建和包消费验证；HTTPS `origin`；私有 `rangerzy/xlog_codec` 的 `main` 与本地提交一致。
 
-- [ ] **Step 1:** 写一个 `windows-2025` Release job，使用 `msys2/setup-msys2@v2`、`msystem: UCRT64`、`update: true`，安装 `mingw-w64-ucrt-x86_64-gcc`、`mingw-w64-ucrt-x86_64-cmake`、`mingw-w64-ucrt-x86_64-ninja`；后续步骤用 `msys2 {0}` shell。
-- [ ] **Step 2:** 工作流记录编译器/CMake/Ninja/包版本，运行 Windows Release preset、默认构建和 `ctest --output-on-failure --no-tests=error`；复用 Task 2 的独立包消费者验证。运行消费者时将对应包 `bin/` 放入 PATH，检查 DLL 与导入库分别存在于约定位置。
-- [ ] **Step 3:** 在本机检查工作流结构及项目完整 diff，完成所有本地验收；交给独立审阅者核对已批准设计、运行证据和代码。修复必要问题，重跑受影响检查；不把审阅意见直接当作未经验证的修改指令。
-- [ ] **Step 4:** 检查 GitHub 同名仓库是否存在；复用现有 HTTPS 认证，不展示凭据。不存在则创建私有 `rangerzy/xlog_codec`；已存在则核对可见性和历史，非空且历史不一致时保留远程，不执行强推。
-- [ ] **Step 5:** 提交经验证的代码和文档，配置 HTTPS `origin` 并执行 `git push -u origin main`。此创建和推送已由原任务授权，无需再次请求发布批准；若认证机制缺少所需权限，则在本地工作完整可审阅后说明具体缺失。
-- [ ] **Step 6:** 等待首次 GitHub Windows 工作流完成，检查实际结果。失败则读取日志、修复、运行相关本地验证并推送，直到通过或遇到确需外部输入的阻塞；不能将工作流文件存在记作 Windows 验收通过。
-- [ ] **Step 7:** 最后核对远程可见性为 private、本地 `main` 与 `origin/main` 提交一致、工作区无遗漏的产品变更；报告仓库链接、本机和 Windows 验证结果，以及仍需环境支持的限制。
+- [x] **Step 1:** 写一个 `windows-2025` Release job，使用 `msys2/setup-msys2@v2`、`msystem: UCRT64`、`update: true`，安装 `mingw-w64-ucrt-x86_64-gcc`、`mingw-w64-ucrt-x86_64-cmake`、`mingw-w64-ucrt-x86_64-ninja`；后续步骤用 `msys2 {0}` shell。
+- [x] **Step 2:** 工作流记录编译器/CMake/Ninja/包版本，运行 Windows Release preset、默认构建和 `ctest --output-on-failure --no-tests=error`；复用 Task 2 的独立包消费者验证。运行消费者时将对应包 `bin/` 放入 PATH，检查 DLL 与导入库分别存在于约定位置。
+- [x] **Step 3:** 在本机检查工作流结构及项目完整 diff，完成所有本地验收；交给独立审阅者核对已批准设计、运行证据和代码。修复必要问题，重跑受影响检查；不把审阅意见直接当作未经验证的修改指令。
+- [x] **Step 4:** 检查 GitHub 同名仓库是否存在；复用现有 HTTPS 认证，不展示凭据。不存在则创建私有 `rangerzy/xlog_codec`；已存在则核对可见性和历史，非空且历史不一致时保留远程，不执行强推。
+- [x] **Step 5:** 提交经验证的代码和文档，配置 HTTPS `origin` 并执行 `git push -u origin main`。此创建和推送已由原任务授权，无需再次请求发布批准；若认证机制缺少所需权限，则在本地工作完整可审阅后说明具体缺失。
+- [x] **Step 6:** 等待首次 GitHub Windows 工作流完成，检查实际结果。失败则读取日志、修复、运行相关本地验证并推送，直到通过或遇到确需外部输入的阻塞；不能将工作流文件存在记作 Windows 验收通过。
+- [x] **Step 7:** 最后核对远程可见性为 private、本地 `main` 与 `origin/main` 提交一致、工作区无遗漏的产品变更；报告仓库链接、本机和 Windows 验证结果，以及仍需环境支持的限制。
 
 ## 计划自查与执行交接
 
 已逐项对照设计：API/Modules/工具链归 Task 1；输出布局、独立构建安装和重定位归 Task 2；Windows 实际运行及 GitHub 交付归 Task 3。Review Focus 的五项均有对应验收步骤。所有函数名、项目名、平台标签和版本值保持一致；不实现真实算法，不引入新产品依赖。
 
-执行方法：用户已确认 Native。采用本会话实施并在完成后独立审阅。原推荐理由：三个任务共享相同的 CMake 与安装接口，两个库仅有同类小实现；本会话连续实施后再独立审阅，能减少交接成本。也可选择 Subagent-driven，按任务实施并逐任务独立审阅。
+执行方法：用户已确认 Native。采用本会话实施并在完成后独立审阅。原推荐理由：三个任务共享相同的 CMake 与安装接口，两个库仅有同类小实现；本会话连续实施后再独立审阅，能减少交接成本。
