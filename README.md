@@ -60,8 +60,8 @@ Debug 使用 `windows-x64-mingw-debug`。Windows CI 将运行同一 Release 构�
 <CMAKE_BINARY_DIR>/outputs/<平台>/<子项目名称>/
 ├── include/<子项目名称>/   # API 与导出宏 .h
 ├── lib/                  # dylib / Windows 导入库
-│   └── cmake/<子项目名称>/
 ├── bin/                  # Windows DLL
+├── cmake/                # Config.cmake / ConfigVersion.cmake
 └── doc/                  # 本库 API 说明
 ```
 

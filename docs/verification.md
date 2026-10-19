@@ -69,3 +69,14 @@ CTest 中的版本检查使用显式失败码，Release 下也有效。
 Windows 验证：[run 39218534706](https://github.com/rangerzy/xlog_codec/actions/runs/39218534706) **成功**。
 实际工具链为 GCC/G++ 16.2.0、CMake 4.4.4、Ninja 1.13.2；DLL/导入库布局检查通过，CTest **8/8** 通过，包含两库的 build/install 回归。
 本记录的后续提交仅修改 Markdown，不改变已验证的实现。
+
+## CMake package 目录调整
+
+按用户确认，将每个库的 Config/ConfigVersion 从 `lib/cmake/<子项目>/` 移至交付根目录下的 `cmake/`，与 `include/`、`lib/`、`bin/`、`doc/` 同级。
+同步配置生成时的安装位置、构建复制清单和安装规则，消费者仍只传库包根目录作为 `CMAKE_PREFIX_PATH`。
+
+- 全新 Debug、Release 配置与构建均无警告，CTest 各 **8/8** 通过。
+- 测试覆盖单库完整交付、增量同步、缺失文件补回、build/install 文件清单及 SHA-256 一致性，以及含空格新路径下的 C/C++11 消费。
+- 生成 Config 的 `PACKAGE_PREFIX_DIR` 正确指向 `cmake/` 的上一级。
+- 现有 macOS Debug/Release 预设及 CLion RelWithDebInfo 构建目录已重新构建，旧位置的已知 Config 文件已清理；未增加额外目标或自动清理逻辑。
+- Windows CI 增加新位置下两个 Config 文件的布局检查。

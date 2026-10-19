@@ -87,17 +87,19 @@ ${CMAKE_BINARY_DIR}/outputs/<平台>/<子项目名称>/
 │       ├── <子项目名称>.h
 │       └── 导出宏头文件
 ├── lib/
-│   ├── 动态库或 Windows 导入库
-│   └── cmake/<子项目名称>/
+│   └── 动态库或 Windows 导入库
 ├── bin/
 │   └── Windows DLL 或示例程序
+├── cmake/
+│   ├── <子项目名称>Config.cmake
+│   └── <子项目名称>ConfigVersion.cmake
 └── doc/
     └── 本库 API 和使用说明
 ```
 
 macOS `.dylib` 放入 `lib/`；Windows DLL 放入 `bin/`、导入库放入 `lib/`。库使用正常平台命名和版本规则。对象文件和 BMI 等中间产物留在普通 CMake 构建树。
 
-公开头文件、生成的导出头、库文件、CMake package 和文档均须出现在各自分发根中。构建流程提供依赖本库的打包目标，以本库安装组件和该分发根为 prefix，完成标准安装式布局。各安装规则使用相对 `include`、`lib`、`bin`、`doc` 的路径，不能把平台和子项目名硬编码到安装目的地中。
+公开头文件、生成的导出头、库文件、CMake package 和文档均须出现在各自分发根中。构建流程提供依赖本库的打包目标，以本库安装组件和该分发根为 prefix，完成标准安装式布局。各安装规则使用相对 `include`、`lib`、`bin`、`cmake`、`doc` 的路径，不能把平台和子项目名硬编码到安装目的地中。
 
 每个分发根可以单独移动或复制；移动后仍能通过 `find_package(xlog_encode CONFIG REQUIRED)` 或 `find_package(xlog_decode CONFIG REQUIRED)` 使用。两个导出的 CMake target 分别为 `xlog::encode` 和 `xlog::decode`。其使用需求仅包含普通头文件与平台链接信息，不向消费者传播 GCC 16、C++26 或模块扫描要求。
 
@@ -139,3 +141,8 @@ macOS `.dylib` 放入 `lib/`；Windows DLL 放入 `bin/`、导入库放入 `lib/
 单库构建时自动同步，修改文档无需重链，删除交付副本后再次构建会补回。
 build 与 install 使用相同文件清单和相同 Config，不再需要单独的打包构建命令。
 调用示例保留在 README 及 C/C++ 测试中；CMake Config 直接声明 `xlog::encode/decode` imported target。
+
+## 后续修订：CMake package 与头文件目录同级
+
+每个库的 Config/ConfigVersion 文件直接放在交付根目录的 `cmake/` 下，与 `include/`、`lib/`、`bin/`、`doc/` 同级。
+build 和 install 使用相同布局，消费者仍将库包根目录加入 `CMAKE_PREFIX_PATH`，无需更改 `find_package` 调用。

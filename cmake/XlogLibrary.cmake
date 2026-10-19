@@ -44,7 +44,7 @@ function(xlog_configure_library project_name export_name)
     endif()
     configure_package_config_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/LibraryConfig.cmake.in"
         "${generated}/${project_name}Config.cmake.in"
-        INSTALL_DESTINATION "lib/cmake/${project_name}")
+        INSTALL_DESTINATION cmake)
     file(GENERATE OUTPUT "${generated}/${project_name}Config.cmake"
         INPUT "${generated}/${project_name}Config.cmake.in")
     write_basic_package_version_file("${generated}/${project_name}ConfigVersion.cmake"
@@ -60,14 +60,14 @@ function(xlog_configure_library project_name export_name)
         "${prefix}/include/${project_name}/${project_name}.h"
         "${prefix}/include/${project_name}/${project_name}_export.h"
         "${prefix}/doc/README.md"
-        "${prefix}/lib/cmake/${project_name}/${project_name}Config.cmake"
-        "${prefix}/lib/cmake/${project_name}/${project_name}ConfigVersion.cmake")
+        "${prefix}/cmake/${project_name}Config.cmake"
+        "${prefix}/cmake/${project_name}ConfigVersion.cmake")
     add_custom_command(OUTPUT ${delivered_files}
         COMMAND "${CMAKE_COMMAND}" -E make_directory
-            "${prefix}/include/${project_name}" "${prefix}/doc" "${prefix}/lib/cmake/${project_name}"
+            "${prefix}/include/${project_name}" "${prefix}/doc" "${prefix}/cmake"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${headers} "${prefix}/include/${project_name}"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${document}" "${prefix}/doc"
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${configs} "${prefix}/lib/cmake/${project_name}"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${configs} "${prefix}/cmake"
         DEPENDS ${headers} "${document}" ${configs}
         COMMENT "Synchronizing ${project_name} headers, documentation and CMake config"
         VERBATIM)
@@ -80,5 +80,5 @@ function(xlog_configure_library project_name export_name)
         ARCHIVE DESTINATION lib COMPONENT ${project_name})
     install(FILES ${headers} DESTINATION "include/${project_name}" COMPONENT ${project_name})
     install(FILES "${document}" DESTINATION doc COMPONENT ${project_name})
-    install(FILES ${configs} DESTINATION "lib/cmake/${project_name}" COMPONENT ${project_name})
+    install(FILES ${configs} DESTINATION cmake COMPONENT ${project_name})
 endfunction()

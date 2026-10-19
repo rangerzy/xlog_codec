@@ -36,8 +36,8 @@ set(metadata
     "include/${XLOG_PROJECT}/${XLOG_PROJECT}.h"
     "include/${XLOG_PROJECT}/${XLOG_PROJECT}_export.h"
     "doc/README.md"
-    "lib/cmake/${XLOG_PROJECT}/${XLOG_PROJECT}Config.cmake"
-    "lib/cmake/${XLOG_PROJECT}/${XLOG_PROJECT}ConfigVersion.cmake")
+    "cmake/${XLOG_PROJECT}Config.cmake"
+    "cmake/${XLOG_PROJECT}ConfigVersion.cmake")
 foreach(path IN LISTS metadata)
     if(NOT EXISTS "${prefix}/${path}")
         message(FATAL_ERROR "Single-library build did not deliver ${path}")

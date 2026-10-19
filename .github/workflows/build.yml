@@ -47,6 +47,8 @@ jobs:
             test -f "$prefix/lib/lib${project}.dll.a"
             test -f "$prefix/include/$project/$project.h"
             test -f "$prefix/doc/README.md"
+            test -f "$prefix/cmake/${project}Config.cmake"
+            test -f "$prefix/cmake/${project}ConfigVersion.cmake"
           done
       - name: Test C ABI and relocated packages
         run: ctest --test-dir build/windows-x64-mingw-release --output-on-failure --no-tests=error
