@@ -64,7 +64,7 @@
 
 **Files:**
 - Create: `cmake/XlogPackage.cmake`、`cmake/LibraryConfig.cmake.in`。
-- Modify: 两个子项目 `CMakeLists.txt`、`tests/CMakeLists.txt`。
+- Modify: 两个子项目 `CMakeLists.txt`、`tests/CMakeLists.txt`、`cmake/XlogLibrary.cmake`。
 - Create: `tests/RunPackageConsumer.cmake`、`tests/consumer/CMakeLists.txt`。
 - Create: `xlog_encode/doc/README.md`、`xlog_decode/doc/README.md`、root `README.md`。
 
@@ -74,13 +74,13 @@
 - Produces: 相对 `include`、`lib`、`bin`、`doc` 的安装规则，`lib/cmake/<project>` 下的 Config/Version/Targets 文件；导出 `xlog::encode`、`xlog::decode`。
 - Produces: 两个独立 CTest 测试 `package_xlog_encode`、`package_xlog_decode`；各测试移动包根后配置并运行 C 和 C++11 消费者。
 
-- [ ] **Step 1:** 编写 package consumer 验证驱动：在含空格的临时目录复制一个包根，设置 `CMAKE_PREFIX_PATH`，以 `find_package(<project> CONFIG REQUIRED)` 查找对应 imported target，分别编译、运行 C/C++11 版本调用测试。验证 imported library 和 include 路径位于新包根，源代码及 BMI 不作为消费输入。
-- [ ] **Step 2:** 对 Task 1 产物运行该驱动，记录缺少 Config 或完整安装文件时的预期失败。
-- [ ] **Step 3:** 实现每库独立 export set、Config/Version 文件、安装组件和 package target。package target 依赖本库及其示例，每次执行 component install 到 `${CMAKE_BINARY_DIR}/outputs/<平台>/<子项目名称>`；安装不依赖另一个库。使用 `configure_package_config_file` 和相对安装目的地支持重定位。
-- [ ] **Step 4:** 完成 root README 与两库 API 文档，写明工具链、presets、构建测试命令、输出目录、独立安装和 `find_package` 示例，以及运行库依赖。确认公共头、导出头、文档和 CMake package 均进入输出，内部模块和编译中间产物没有进入分发。
-- [ ] **Step 5:** 全新配置一个构建目录，只执行 `--target package_xlog_encode`，检查 decode 动态库未构建；再用另一个全新目录对 decode 重复。移动各包并执行消费者验证，均应成功。
-- [ ] **Step 6:** 用显式临时安装 prefix 验证两个 `--component`；在不改库实现的情况下修改并还原一次公开头注释或文档，重新执行 package target，检查输出对应内容更新。使用 `nm` 检查两个未改名 C API 符号已导出、内部模块实体未泄漏；用 `otool -L` 检查 macOS install name 和依赖，确认消费者实际加载移动后的 dylib。
-- [ ] **Step 7:** 构建并运行 Debug 的全部 CTest，再配置、构建和运行 `macos-arm64-release` 的全部 CTest；所有测试通过后，检查 diff 并提交 `build: add relocatable per-library packages`。
+- [x] **Step 1:** 编写 package consumer 验证驱动：在含空格的临时目录复制一个包根，设置 `CMAKE_PREFIX_PATH`，以 `find_package(<project> CONFIG REQUIRED)` 查找对应 imported target，分别编译、运行 C/C++11 版本调用测试。验证 imported library 和 include 路径位于新包根，源代码及 BMI 不作为消费输入。
+- [x] **Step 2:** 对 Task 1 产物运行该驱动，记录缺少 Config 或完整安装文件时的预期失败。
+- [x] **Step 3:** 实现每库独立 export set、Config/Version 文件、安装组件和 package target。package target 依赖本库及其示例，每次执行 component install 到 `${CMAKE_BINARY_DIR}/outputs/<平台>/<子项目名称>`；安装不依赖另一个库。使用 `configure_package_config_file` 和相对安装目的地支持重定位。
+- [x] **Step 4:** 完成 root README 与两库 API 文档，写明工具链、presets、构建测试命令、输出目录、独立安装和 `find_package` 示例，以及运行库依赖。确认公共头、导出头、文档和 CMake package 均进入输出，内部模块和编译中间产物没有进入分发。
+- [x] **Step 5:** 全新配置一个构建目录，只执行 `--target package_xlog_encode`，检查 decode 动态库未构建；再用另一个全新目录对 decode 重复。移动各包并执行消费者验证，均应成功。
+- [x] **Step 6:** 用显式临时安装 prefix 验证两个 `--component`；在不改库实现的情况下修改并还原一次公开头注释或文档，重新执行 package target，检查输出对应内容更新。使用 `nm` 检查两个未改名 C API 符号已导出、内部模块实体未泄漏；用 `otool -L` 检查 macOS install name 和依赖，确认消费者实际加载移动后的 dylib。
+- [x] **Step 7:** 构建并运行 Debug 的全部 CTest，再配置、构建和运行 `macos-arm64-release` 的全部 CTest；所有测试通过后，检查 diff 并提交 `build: add relocatable per-library packages`。
 
 ### Task 3: Windows CI、独立审阅与 GitHub 推送
 

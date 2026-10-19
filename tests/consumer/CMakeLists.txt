@@ -1,0 +1,30 @@
+cmake_minimum_required(VERSION 4.2.2)
+project(xlog_consumer LANGUAGES C CXX)
+set(CMAKE_FIND_USE_PACKAGE_REGISTRY OFF)
+set(CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY OFF)
+find_package(${XLOG_PROJECT} CONFIG REQUIRED)
+string(REPLACE "xlog_" "" export_name "${XLOG_PROJECT}")
+set(library "xlog::${export_name}")
+
+get_target_property(configs ${library} IMPORTED_CONFIGURATIONS)
+foreach(config IN LISTS configs)
+    foreach(property IN ITEMS IMPORTED_LOCATION IMPORTED_IMPLIB)
+        get_target_property(location ${library} ${property}_${config})
+        if(location)
+            cmake_path(IS_PREFIX XLOG_PREFIX "${location}" NORMALIZE inside_package)
+            if(NOT inside_package OR NOT EXISTS "${location}")
+                message(FATAL_ERROR "Non-relocatable imported artifact: ${location}")
+            endif()
+        endif()
+    endforeach()
+endforeach()
+
+foreach(language IN ITEMS c cpp)
+    add_executable(consumer_${language} "version_${language}.${language}")
+    target_compile_definitions(consumer_${language} PRIVATE
+        "XLOG_HEADER=\"${XLOG_PROJECT}/${XLOG_PROJECT}.h\""
+        "XLOG_VERSION_FUNCTION=${XLOG_PROJECT}_version")
+    target_link_libraries(consumer_${language} PRIVATE ${library})
+    set_target_properties(consumer_${language} PROPERTIES
+        CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)
+endforeach()

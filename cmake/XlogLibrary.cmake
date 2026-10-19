@@ -30,7 +30,7 @@ function(xlog_add_library project_name export_name)
     if(APPLE)
         set_target_properties(${project_name} PROPERTIES
             INSTALL_NAME_DIR "@rpath" BUILD_WITH_INSTALL_NAME_DIR YES
-            INSTALL_RPATH "@loader_path")
+            BUILD_WITH_INSTALL_RPATH YES)
     endif()
     add_executable(${project_name}_example "examples/version.c")
     target_link_libraries(${project_name}_example PRIVATE ${project_name})
@@ -38,6 +38,6 @@ function(xlog_add_library project_name export_name)
         RUNTIME_OUTPUT_DIRECTORY "${prefix}/bin")
     if(APPLE)
         set_target_properties(${project_name}_example PROPERTIES
-            INSTALL_RPATH "@loader_path/../lib")
+            INSTALL_RPATH "@loader_path/../lib" BUILD_WITH_INSTALL_RPATH YES)
     endif()
 endfunction()

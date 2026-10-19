@@ -14,4 +14,11 @@ foreach(project_name IN ITEMS xlog_encode xlog_decode)
                 ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:${project_name}>")
         endif()
     endforeach()
+    add_test(NAME package_${project_name}
+        COMMAND "${CMAKE_COMMAND}"
+            "-DXLOG_PROJECT=${project_name}"
+            "-DXLOG_PREFIX=${CMAKE_BINARY_DIR}/outputs/${XLOG_PLATFORM}/${project_name}"
+            "-DXLOG_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/package-consumers"
+            "-DXLOG_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/RunPackageConsumer.cmake")
 endforeach()
