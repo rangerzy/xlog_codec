@@ -45,3 +45,27 @@ CTest 中的版本检查使用显式失败码，Release 下也有效。
 2. **合并安装前缀**：按已确认的独立库包根交付；将两库同时安装到同一个 prefix 会使 `doc/README.md` 相互覆盖。需要合并 SDK 时应另行调整文档命名。
 3. **平台范围**：当前范围为 macOS ARM64 与 Windows x64 UCRT64 GCC；其他 MinGW 发行版、Linux、MSVC、其他架构和更早 macOS 均未作兼容性承诺，直接使用可能不兼容。
 4. **GCC 运行库**：按已确认范围保留动态运行库依赖，不静态捆绑。目标机器缺少匹配运行库时可能出现加载失败，使用者应准备相应运行环境。
+
+## 构建与 install 一致性修正
+
+代码提交：`a8440e904f2691d7eea22c276c2b92c7fdaf1772`。
+
+保留 `xlog_encode`、`xlog_decode` 两个同名 SHARED target，移除 `package_*`、独立示例程序目标和单独的 package helper。
+子项目直接声明库与私有 Modules，公共配置统一管理库属性、文件复制依赖和安装规则。
+同一份头文件、文档与可重定位 Config/ConfigVersion 用于 build 和 install。
+调用示例由 README 和 C/C++ 测试提供。
+
+回归测试先观察到单独构建缺少公开头文件的失败，再验证修正后的行为：
+
+- 全新 Debug、Release 配置与构建无警告，CTest 各 **8/8** 通过。
+- 单独构建各库得到完整交付目录，未生成另一个库的交付文件。
+- 仅修改文档时同步副本，不重新链接动态库；头文件更新也会同步。
+- 删除公开头、导出头、文档或 CMake 配置副本后，再次构建会补回。
+- build 与独立 component install 的文件清单和每个文件的 SHA-256 一致。
+- 安装目录移动后，普通 C/C++11 消费者仍能链接运行。
+- 既有 macOS Debug/Release 预设已重新构建；旧示例程序和旧 Targets 文件残留在本次迁移时清理，CMake 不添加自动清理任意历史文件的逻辑。
+- 独立审阅未发现 Critical / Important / Minor 问题。
+
+Windows 验证：[run 39218534706](https://github.com/rangerzy/xlog_codec/actions/runs/39218534706) **成功**。
+实际工具链为 GCC/G++ 16.2.0、CMake 4.4.4、Ninja 1.13.2；DLL/导入库布局检查通过，CTest **8/8** 通过，包含两库的 build/install 回归。
+本记录的后续提交仅修改 Markdown，不改变已验证的实现。
