@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 4.2.2)
+project(xlog_codec VERSION 0.1.0 LANGUAGES C CXX)
+
+set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(XlogToolchain)
+include(XlogLibrary)
+include(CTest)
+
+add_subdirectory(xlog_encode)
+add_subdirectory(xlog_decode)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

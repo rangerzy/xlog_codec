@@ -52,13 +52,13 @@
 - Produces: `xlog_add_library(project_name, export_name)` CMake helper，调用参数分别为 `(xlog_encode, encode)`、`(xlog_decode, decode)`；模块、反射及版本配置仅为 PRIVATE 使用需求。
 - Produces: 公开导出宏 `XLOG_ENCODE_EXPORT`、`XLOG_DECODE_EXPORT`；导出宏头分别为 `xlog_encode/xlog_encode_export.h`、`xlog_decode/xlog_decode_export.h`。
 
-- [ ] **Step 1:** 写版本调用测试与最小头文件、目标声明；C 和 C++ 各测试两个库。每次调用都显式验证非空和 `strcmp(value, "0.1.0") == 0`，使用非零返回码报告失败，不依赖 `assert`。
-- [ ] **Step 2:** 配置 `macos-arm64-debug` 并构建测试，记录缺少 `xlog_encode_version`、`xlog_decode_version` 定义导致的预期链接失败。若失败原因是工具链或拼写错误，先修正测试环境。
-- [ ] **Step 3:** 实现工具链检查、四个 presets 和公共目标 helper。检查 GNU GCC ≥16、Ninja 单配置和允许的平台；以 `<meta>` 反射表达式验证编译器能力。忽略 `build/`、`CMakeUserPresets.json`、`.idea/`，保留已有 IDE 文件。
-- [ ] **Step 4:** 为两库实现私有模块、最小版本元数据反射和编译期断言，并以普通 `.cpp` 实现公开 C ABI。版本值来自 root 版本配置。默认隐藏符号，公开函数有导出宏，设置平台库名与版本。
-- [ ] **Step 5:** 添加两个 C 调用示例，输出版本；例程仅通过公开头文件调用。C++ 测试使用普通 C++11，不导入模块。将最终动态库、Windows 导入库和示例分别放入约定的 `lib/`、`bin/`。
-- [ ] **Step 6:** 执行 `"$XLOG_CMAKE" --build --preset macos-arm64-debug`，然后 `"$XLOG_CTEST" --test-dir build/macos-arm64-debug --output-on-failure --no-tests=error`；四个 API 测试全部通过。以默认 AppleClang 配置另一个临时构建目录，预期得到清楚的 GNU GCC 16 要求错误；使用 Ninja Multi-Config 时预期明确拒绝。
-- [ ] **Step 7:** 对照 API 与模块边界检查 diff，执行 `git diff --check`，提交 `feat: initialize modular xlog shared libraries`，仅暂存本任务文件。
+- [x] **Step 1:** 写版本调用测试与最小头文件、目标声明；C 和 C++ 各测试两个库。每次调用都显式验证非空和 `strcmp(value, "0.1.0") == 0`，使用非零返回码报告失败，不依赖 `assert`。
+- [x] **Step 2:** 配置 `macos-arm64-debug` 并构建测试，记录缺少 `xlog_encode_version`、`xlog_decode_version` 定义导致的预期链接失败。若失败原因是工具链或拼写错误，先修正测试环境。
+- [x] **Step 3:** 实现工具链检查、四个 presets 和公共目标 helper。检查 GNU GCC ≥16、Ninja 单配置和允许的平台；以 `<meta>` 反射表达式验证编译器能力。忽略 `build/`、`CMakeUserPresets.json`、`.idea/`，保留已有 IDE 文件。
+- [x] **Step 4:** 为两库实现私有模块、最小版本元数据反射和编译期断言，并以普通 `.cpp` 实现公开 C ABI。版本值来自 root 版本配置。默认隐藏符号，公开函数有导出宏，设置平台库名与版本。
+- [x] **Step 5:** 添加两个 C 调用示例，输出版本；例程仅通过公开头文件调用。C++ 测试使用普通 C++11，不导入模块。将最终动态库、Windows 导入库和示例分别放入约定的 `lib/`、`bin/`。
+- [x] **Step 6:** 执行 `"$XLOG_CMAKE" --build --preset macos-arm64-debug`，然后 `"$XLOG_CTEST" --test-dir build/macos-arm64-debug --output-on-failure --no-tests=error`；四个 API 测试全部通过。以默认 AppleClang 配置另一个临时构建目录，预期得到清楚的 GNU GCC 16 要求错误；使用 Ninja Multi-Config 时预期明确拒绝。
+- [x] **Step 7:** 对照 API 与模块边界检查 diff，执行 `git diff --check`，提交 `feat: initialize modular xlog shared libraries`，仅暂存本任务文件。
 
 ### Task 2: 独立分发与重定位验收
 
@@ -105,4 +105,4 @@
 
 已逐项对照设计：API/Modules/工具链归 Task 1；输出布局、独立构建安装和重定位归 Task 2；Windows 实际运行及 GitHub 交付归 Task 3。Review Focus 的五项均有对应验收步骤。所有函数名、项目名、平台标签和版本值保持一致；不实现真实算法，不引入新产品依赖。
 
-执行方法待用户选择。推荐 Native：三个任务共享相同的 CMake 与安装接口，两个库仅有同类小实现；本会话连续实施后再独立审阅，能减少交接成本。也可选择 Subagent-driven，按任务实施并逐任务独立审阅。
+执行方法：用户已确认 Native。采用本会话实施并在完成后独立审阅。原推荐理由：三个任务共享相同的 CMake 与安装接口，两个库仅有同类小实现；本会话连续实施后再独立审阅，能减少交接成本。也可选择 Subagent-driven，按任务实施并逐任务独立审阅。

@@ -1,0 +1,49 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 4, "minor": 2, "patch": 2 },
+  "configurePresets": [
+    {
+      "name": "gcc-ninja",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": { "BUILD_TESTING": "ON" }
+    },
+    {
+      "name": "macos-arm64-debug",
+      "inherits": "gcc-ninja",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Darwin" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc-16",
+        "CMAKE_CXX_COMPILER": "g++-16"
+      }
+    },
+    {
+      "name": "macos-arm64-release",
+      "inherits": "macos-arm64-debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "windows-x64-mingw-debug",
+      "inherits": "gcc-ninja",
+      "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "windows-x64-mingw-release",
+      "inherits": "windows-x64-mingw-debug",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "macos-arm64-debug", "configurePreset": "macos-arm64-debug" },
+    { "name": "macos-arm64-release", "configurePreset": "macos-arm64-release" },
+    { "name": "windows-x64-mingw-debug", "configurePreset": "windows-x64-mingw-debug" },
+    { "name": "windows-x64-mingw-release", "configurePreset": "windows-x64-mingw-release" }
+  ]
+}
