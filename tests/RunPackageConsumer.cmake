@@ -12,7 +12,9 @@ file(MAKE_DIRECTORY "${work}/source")
 file(COPY "${XLOG_PREFIX}/" DESTINATION "${prefix}")
 file(COPY "${CMAKE_CURRENT_LIST_DIR}/consumer/" DESTINATION "${work}/source")
 file(COPY "${CMAKE_CURRENT_LIST_DIR}/version_c.c"
-    "${CMAKE_CURRENT_LIST_DIR}/version_cpp.cpp" DESTINATION "${work}/source")
+    "${CMAKE_CURRENT_LIST_DIR}/version_cpp.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/decode_c.c"
+    "${CMAKE_CURRENT_LIST_DIR}/encode_c.c" DESTINATION "${work}/source")
 
 file(GLOB_RECURSE module_artifacts "${prefix}/*.cppm" "${prefix}/*.gcm"
     "${prefix}/*.pcm" "${prefix}/*.o" "${prefix}/*.obj")
@@ -34,8 +36,14 @@ run_checked("${CMAKE_COMMAND}" -S "${work}/source" -B "${work}/build" -G Ninja
     "-DCMAKE_PREFIX_PATH=${prefix}" "-DXLOG_PREFIX=${prefix}"
     "-DXLOG_PROJECT=${XLOG_PROJECT}")
 run_checked("${CMAKE_COMMAND}" --build "${work}/build")
-foreach(language IN ITEMS c cpp)
-    set(executable "${work}/build/consumer_${language}")
+set(consumer_targets consumer_c consumer_cpp)
+if(XLOG_PROJECT STREQUAL "xlog_decode")
+    list(APPEND consumer_targets consumer_decode_c consumer_decode_cpp)
+elseif(XLOG_PROJECT STREQUAL "xlog_encode")
+    list(APPEND consumer_targets consumer_encode_c consumer_encode_cpp)
+endif()
+foreach(consumer IN LISTS consumer_targets)
+    set(executable "${work}/build/${consumer}")
     if(CMAKE_HOST_WIN32)
         string(APPEND executable ".exe")
         run_checked("${CMAKE_COMMAND}" -E env --modify

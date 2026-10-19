@@ -7,7 +7,10 @@
       "hidden": true,
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
-      "cacheVariables": { "BUILD_TESTING": "ON" }
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "XLOG_BUILD_EXAMPLES": "ON"
+      }
     },
     {
       "name": "macos-arm64-debug",

@@ -52,23 +52,32 @@ function(xlog_configure_library project_name export_name)
 
     # The same file lists feed the build copy rule and install rules.
     set(headers "${CMAKE_CURRENT_SOURCE_DIR}/include/${project_name}/${project_name}.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/${project_name}/${project_name}_config.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/include/${project_name}/${project_name}_types.h"
         "${generated}/${project_name}/${project_name}_export.h")
-    set(document "${CMAKE_CURRENT_SOURCE_DIR}/doc/README.md")
+    file(GLOB documents CONFIGURE_DEPENDS LIST_DIRECTORIES FALSE
+        "${CMAKE_CURRENT_SOURCE_DIR}/doc/*")
     set(configs "${generated}/${project_name}Config.cmake"
         "${generated}/${project_name}ConfigVersion.cmake")
     set(delivered_files
-        "${prefix}/include/${project_name}/${project_name}.h"
-        "${prefix}/include/${project_name}/${project_name}_export.h"
-        "${prefix}/doc/README.md"
         "${prefix}/cmake/${project_name}Config.cmake"
         "${prefix}/cmake/${project_name}ConfigVersion.cmake")
+    foreach(header IN LISTS headers)
+        get_filename_component(header_name "${header}" NAME)
+        list(APPEND delivered_files "${prefix}/include/${project_name}/${header_name}")
+    endforeach()
+    foreach(document IN LISTS documents)
+        get_filename_component(document_name "${document}" NAME)
+        list(APPEND delivered_files "${prefix}/doc/${document_name}")
+    endforeach()
+
     add_custom_command(OUTPUT ${delivered_files}
         COMMAND "${CMAKE_COMMAND}" -E make_directory
             "${prefix}/include/${project_name}" "${prefix}/doc" "${prefix}/cmake"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${headers} "${prefix}/include/${project_name}"
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${document}" "${prefix}/doc"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${documents} "${prefix}/doc"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${configs} "${prefix}/cmake"
-        DEPENDS ${headers} "${document}" ${configs}
+        DEPENDS ${headers} ${documents} ${configs}
         COMMENT "Synchronizing ${project_name} headers, documentation and CMake config"
         VERBATIM)
     set_source_files_properties(${delivered_files} PROPERTIES HEADER_FILE_ONLY YES)
@@ -79,6 +88,6 @@ function(xlog_configure_library project_name export_name)
         LIBRARY DESTINATION lib COMPONENT ${project_name} NAMELINK_COMPONENT ${project_name}
         ARCHIVE DESTINATION lib COMPONENT ${project_name})
     install(FILES ${headers} DESTINATION "include/${project_name}" COMPONENT ${project_name})
-    install(FILES "${document}" DESTINATION doc COMPONENT ${project_name})
+    install(FILES ${documents} DESTINATION doc COMPONENT ${project_name})
     install(FILES ${configs} DESTINATION cmake COMPONENT ${project_name})
 endfunction()

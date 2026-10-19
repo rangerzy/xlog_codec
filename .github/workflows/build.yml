@@ -28,6 +28,8 @@ jobs:
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-zlib
       - name: Record toolchain
         run: |
           gcc --version
@@ -35,9 +37,10 @@ jobs:
           cmake --version
           ninja --version
           pacman -Q mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
+          pacman -Q mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-zlib
       - name: Configure
-        run: cmake --preset windows-x64-mingw-release
-      - name: Build libraries
+        run: cmake --preset windows-x64-mingw-release -DXLOG_BUILD_EXAMPLES=ON
+      - name: Build libraries, example and tests
         run: cmake --build --preset windows-x64-mingw-release
       - name: Check DLL and import library layout
         run: |
@@ -46,9 +49,29 @@ jobs:
             test -f "$prefix/bin/lib${project}.dll"
             test -f "$prefix/lib/lib${project}.dll.a"
             test -f "$prefix/include/$project/$project.h"
+            test -f "$prefix/include/$project/${project}_config.h"
+            test -f "$prefix/include/$project/${project}_types.h"
+            test -f "$prefix/include/$project/${project}_export.h"
             test -f "$prefix/doc/README.md"
+            test -f "$prefix/doc/OpenSSL-LICENSE.txt"
+            test -f "$prefix/doc/ZLIB-LICENSE.txt"
             test -f "$prefix/cmake/${project}Config.cmake"
             test -f "$prefix/cmake/${project}ConfigVersion.cmake"
+          done
+          test -f "build/windows-x64-mingw-release/example/example.exe"
+      - name: Check codec runtime dependencies
+        run: |
+          for project in xlog_encode xlog_decode; do
+            library="build/windows-x64-mingw-release/outputs/windows-x64-mingw/$project/bin/lib${project}.dll"
+            objdump -p "$library" | sed -n 's/.*DLL Name: //p'
+            if objdump -p "$library" | grep -Ei 'DLL Name: .*(libcrypto|libssl|zlib|libz)' ; then
+              echo "OpenSSL and zlib must be linked statically in the delivered $project"
+              exit 1
+            fi
+            if objdump -p "$library" | grep -Ei 'DLL Name: .*xlog_(encode|decode)' ; then
+              echo "Each codec DLL must be independently usable"
+              exit 1
+            fi
           done
       - name: Test C ABI and relocated packages
         run: ctest --test-dir build/windows-x64-mingw-release --output-on-failure --no-tests=error
