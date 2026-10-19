@@ -18,7 +18,7 @@ target_link_libraries(your_app PRIVATE xlog::encode)
 
 将本包根目录加入 `CMAKE_PREFIX_PATH`。头文件在 `include`，CMake package 在
 `lib/cmake/xlog_encode`，动态库在 `lib`（Windows DLL 在 `bin`，导入库在 `lib`）。
-`bin/xlog_encode_example` 可演示调用；Windows 文件带 `.exe` 后缀。
+直接构建 `xlog_encode` 即可得到以上完整目录；头文件调用示例见上方代码。
 
 Windows 运行时需使 `bin` 和匹配的 UCRT64 GCC 运行库可被系统找到。
 macOS 需要匹配的 GCC 运行库；包不静态捆绑 GCC 运行库。

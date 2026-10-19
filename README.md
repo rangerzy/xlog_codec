@@ -7,7 +7,7 @@ xlog 编解码工程骨架。根 CMake 项目管理两个互不依赖的动态�
 | `xlog_encode` | `xlog_encode.core` | `xlog_encode_version()` | `xlog::encode` |
 | `xlog_decode` | `xlog_decode.core` | `xlog_decode_version()` | `xlog::decode` |
 
-当前版本 `0.1.0`，仅有版本查询、静态反射示例和调用示例，尚未实现真实 xlog 编解码。
+当前版本 `0.1.0`，仅有版本查询、静态反射示例和头文件调用测试，尚未实现真实 xlog 编解码。
 
 ## 工具链
 
@@ -54,34 +54,37 @@ Debug 使用 `windows-x64-mingw-debug`。Windows CI 将运行同一 Release 构�
 
 ## 输出与独立安装
 
-默认构建包含两个 package target，生成完整分发目录：
+普通构建直接生成动态库及完整交付目录：
 
 ```text
 <CMAKE_BINARY_DIR>/outputs/<平台>/<子项目名称>/
 ├── include/<子项目名称>/   # API 与导出宏 .h
 ├── lib/                  # dylib / Windows 导入库
 │   └── cmake/<子项目名称>/
-├── bin/                  # 示例程序、Windows DLL
+├── bin/                  # Windows DLL
 └── doc/                  # 本库 API 说明
 ```
 
 平台标签为 `macos-arm64`、`windows-x64-mingw`。Debug/Release 使用不同构建目录，输出中不再增加配置层。
-只构建单个库并生成完整包：
+单独构建任意一个库，同样得到该库的完整交付目录：
 
 ```sh
-cmake --build build/macos-arm64-debug --target package_xlog_encode
-cmake --build build/macos-arm64-debug --target package_xlog_decode
+cmake --build build/macos-arm64-debug --target xlog_encode
+cmake --build build/macos-arm64-debug --target xlog_decode
 ```
 
-仅构建动态库可指定 `--target xlog_encode` 或 `xlog_decode`；完整头文件、文档和 CMake package 由 package target 同步。
-安装至自选目录时先构建所需 package target，再执行：
+构建自动同步公开头文件、导出宏头、文档和 CMake 引用配置；仅修改文档不会重新链接库，删除输出副本后再次构建会补回文件。
+安装使用相同文件清单。先构建所需库，再安装到自选目录：
 
 ```sh
 cmake --install build/macos-arm64-debug --component xlog_encode --prefix /absolute/path/encode-sdk
 cmake --install build/macos-arm64-debug --component xlog_decode --prefix /absolute/path/decode-sdk
 ```
 
-每个包可单独移动。模块源、BMI、对象文件留在构建树，不作为分发内容。
+每个交付目录可单独移动。模块源、BMI、对象文件留在构建树，不作为分发内容。
+
+子项目的 `CMakeLists.txt` 直接声明动态库与私有模块；`cmake/XlogLibrary.cmake` 集中库属性、文件同步及安装规则。
+产品构建目标只有 `xlog_encode`、`xlog_decode`，调用示例由下面的代码和 C/C++ 测试提供。
 
 ## 外部调用
 
@@ -107,11 +110,12 @@ int main(void) {
 `#include <xlog_decode/xlog_decode.h>`，调用 `xlog_decode_version()`。
 返回字符串由库持有，库加载期间有效，不得修改或释放。
 
-macOS 库使用 `@rpath` install name，示例程序通过 `@loader_path/../lib` 查找本包库。
+macOS 库使用 `@rpath` install name，外部 CMake target 提供对应链接位置。
 Windows 运行时将本包 `bin` 加入 PATH；同时需要匹配的 GCC 运行库。
 本工程不静态捆绑 GCC 运行库，也不承诺未经验证的旧版 macOS 兼容性。
 
-CTest 验证 C/C++11 调用、各包移动至含空格新路径后的 C/C++11 消费，macOS 还检查实际加载的 dylib 路径。
+CTest 验证 C/C++11 调用、交付目录移动后的消费、单库构建、头文件和文档增量同步，以及 build/install 文件清单和内容一致性。
+macOS 还检查实际加载的 dylib 路径。
 
 ## 持续集成
 

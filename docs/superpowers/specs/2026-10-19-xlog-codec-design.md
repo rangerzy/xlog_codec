@@ -2,6 +2,8 @@
 
 状态：需求共识与本文均已获用户确认。日期：2026-10-19。
 
+本文记录初始化方案。后续用户已确认简化构建入口，当前行为见文末修订及根 README。
+
 ## 目标与边界
 
 建立一个 xlog 编解码工程，验证现代 C++ 构建、内部模块组织和动态库分发方式，为后续真实算法提供基础。本次只提供版本查询方法、调用示例和必要的构建验证，不引入真实 xlog 编解码、加密或压缩实现。
@@ -128,3 +130,12 @@ macOS `.dylib` 放入 `lib/`；Windows DLL 放入 `bin/`、导入库放入 `lib/
 - [CMake 4.3 Modules 文档](https://cmake.org/cmake/help/v4.3/manual/cmake-cxxmodules.7.html)：项目命名模块和 `import std` 的支持边界。
 - [GCC 16 变更说明](https://gcc.gnu.org/gcc-16/changes.html)：C++26 静态反射支持。
 - [MSYS2 环境说明](https://www.msys2.org/docs/environments/)：UCRT64 工具链选择。
+
+## 后续修订：直接构建动态库即交付完整目录
+
+保留同名的两个 SHARED target，移除额外的 `package_*` 和独立示例程序目标。
+子项目直接声明库和 Modules，公共 CMake 文件统一配置属性、复制清单和安装规则。
+公开头文件、导出宏头、文档、可重定位 Config/ConfigVersion 文件作为库的生成文件依赖：
+单库构建时自动同步，修改文档无需重链，删除交付副本后再次构建会补回。
+build 与 install 使用相同文件清单和相同 Config，不再需要单独的打包构建命令。
+调用示例保留在 README 及 C/C++ 测试中；CMake Config 直接声明 `xlog::encode/decode` imported target。

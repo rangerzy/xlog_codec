@@ -1,4 +1,10 @@
 @PACKAGE_INIT@
 
-include("${CMAKE_CURRENT_LIST_DIR}/@project_name@Targets.cmake")
+if(NOT TARGET xlog::@export_name@)
+    add_library(xlog::@export_name@ SHARED IMPORTED)
+    set_target_properties(xlog::@export_name@ PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${PACKAGE_PREFIX_DIR}/include"
+        IMPORTED_LOCATION "${PACKAGE_PREFIX_DIR}/@runtime_directory@/$<TARGET_FILE_NAME:@project_name@>"
+        @link_property@ "@link_value@")
+endif()
 check_required_components(@project_name@)

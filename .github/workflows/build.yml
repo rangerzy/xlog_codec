@@ -37,7 +37,7 @@ jobs:
           pacman -Q mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
       - name: Configure
         run: cmake --preset windows-x64-mingw-release
-      - name: Build libraries and packages
+      - name: Build libraries
         run: cmake --build --preset windows-x64-mingw-release
       - name: Check DLL and import library layout
         run: |
