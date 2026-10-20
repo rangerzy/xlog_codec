@@ -236,3 +236,14 @@ Windows 验证：[run 39218534706](https://github.com/rangerzy/xlog_codec/action
 - Debug、Release、CLion RelWithDebInfo 的 `example` 构建均通过；Debug、Release 的 `example_roundtrip` 各 **1/1** 通过。
 - 实际输出校验：原文与解码内容均为 35 字节且一致；95 字节编码结果的十六进制输出无遗漏，
   重组后 magic 为 `0x07`、结束标记为 `0x00`，payload 长度与完整帧大小匹配，最终 `match=true`。
+
+## 128 KiB 日志示例（2026-10-20）
+
+- 参考 [zlib 官方示例](https://www.zlib.net/zlib_how.html) 在内存允许时使用 128 KiB 或 256 KiB 处理缓冲区的建议，
+  将输入改为 128 KiB（131072 字节）的多条日志记录。该建议针对处理效率，不代表最小输入长度或压缩率保证。
+- 仍仅有一个 `main()`，在其中生成请求序号、耗时等内容变化的日志；保留默认配置调用和完整原文、hex、解码打印。
+  汇总增加完整编码大小与原文大小的百分比。
+- 实测 `input=131072, xlog=7033, decoded=131072, encoded/input=5.37%, match=true`，
+  完整 xlog 比原文减少 124039 字节。单独重组打印的 hex，验证全部 7033 字节、magic、payload 长度和结束标记；
+  同时按长度提取全部原文与解码输出，逐字节相同。
+- Debug、Release、CLion RelWithDebInfo 的 `example` 均构建通过；Debug、Release 的 `example_roundtrip` 各 **1/1** 通过。

@@ -5,11 +5,19 @@
 #include <format>
 #include <span>
 #include <iostream>
-#include <string_view>
+#include <string>
 
 int main()
 {
-    constexpr std::string_view input = "Hello xlog! Hello xlog! Hello xlog!";
+    // zlib's usage guide suggests 128/256 KiB processing buffers.
+    constexpr std::size_t sample_size = 128 * 1024;
+    std::string input;
+    input.reserve(sample_size);
+    for (std::size_t request = 0; input.size() < sample_size; ++request) {
+        input += std::format("[INFO] request={} method=GET path=/api/example status=200 elapsed_ms={}\n",
+            request, request % 37 + 1);
+    }
+    input.resize(sample_size);
     std::cout << "Original (" << input.size() << " bytes): " << input << '\n';
     xlog_encode_buffer_result encoded{};
     xlog_decode_buffer_result decoded{};
@@ -49,7 +57,9 @@ int main()
     const bool matches = decoded.size == input.size() && decoded.data != nullptr
         && std::memcmp(input.data(), decoded.data, input.size()) == 0;
     std::cout << "input=" << input.size() << ", xlog=" << encoded.size
-              << ", decoded=" << decoded.size << ", match=" << std::boolalpha << matches << '\n';
+              << ", decoded=" << decoded.size
+              << ", encoded/input=" << std::format("{:.2f}%", 100.0 * encoded.size / input.size())
+              << ", match=" << std::boolalpha << matches << '\n';
     xlog_decode_free_buffer(&decoded);
     xlog_encode_free_buffer(&encoded);
     return matches ? 0 : 1;
