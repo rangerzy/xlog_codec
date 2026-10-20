@@ -74,13 +74,17 @@ jobs:
         run: |
           for project in xlog_encode xlog_decode; do
             prefix="build/$XLOG_PRESET/outputs/$XLOG_PLATFORM/$project"
+            other_project=xlog_decode
+            if [[ "$project" == xlog_decode ]]; then
+              other_project=xlog_encode
+            fi
             if [[ "$RUNNER_OS" == macOS ]]; then
               dependencies="$(otool -L "$prefix/lib/lib${project}.dylib" | tail -n +2)"
             else
               dependencies="$(readelf -d "$prefix/lib/lib${project}.so" | sed -n '/(NEEDED)/p')"
             fi
             printf '%s\n' "$dependencies"
-            if printf '%s\n' "$dependencies" | grep -Ei '(libcrypto|libssl|libz[.]|libxlog_(encode|decode))'; then
+            if printf '%s\n' "$dependencies" | grep -Ei "(libcrypto|libssl|libz[.]|lib${other_project}[.])"; then
               echo "Each SDK must use static Crypto/zlib and remain independently usable"
               exit 1
             fi
