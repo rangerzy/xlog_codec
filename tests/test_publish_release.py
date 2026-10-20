@@ -35,6 +35,8 @@ class FakeGitHub:
         self.failures = {}
         self.downloaded = []
         self.events = []
+        self.stale_release_list = False
+        self.graphql_response = None
 
     def existing_release(self, *, draft=False, names=NAMES, digest=True):
         self.tag_sha = SHA
@@ -59,7 +61,14 @@ class FakeGitHub:
             return subprocess.CompletedProcess(command, code, "", message)
         if args[0] == "api":
             endpoint = args[1]
-            if endpoint.endswith(f"/commits/tags/{TAG}"):
+            if endpoint == "graphql":
+                assert "owner=example" in args and "name=xlog_codec" in args and f"tag={TAG}" in args
+                found = {"databaseId": 100} if self.release else None
+                if self.stale_release_list and "create-draft" in self.writes:
+                    found = None
+                value = json.dumps(self.graphql_response if self.graphql_response is not None else
+                                   {"data": {"repository": {"release": found}}})
+            elif endpoint.endswith(f"/commits/tags/{TAG}"):
                 assert args[-2:] == ["--jq", ".sha"]
                 if self.tag_sha is None:
                     return subprocess.CompletedProcess(command, 1, "", "gh: No commit found (HTTP 422)\n")
@@ -85,9 +94,17 @@ class FakeGitHub:
             elif endpoint.endswith("/releases?per_page=100"):
                 assert args[-2:] == ["--paginate", "--slurp"]
                 # Put existing releases on a later page, including authenticated drafts.
-                value = json.dumps([[], [self.release]] if self.release else [[]])
+                value = json.dumps([[], [self.release]] if self.release and not self.stale_release_list else [[]])
             elif endpoint.endswith("/releases/100"):
                 assert self.release is not None
+                value = json.dumps(self.release)
+            elif endpoint.endswith("/releases"):
+                assert args[args.index("--method") + 1] == "POST"
+                assert self.tag_sha == SHA and self.release is None
+                assert f"tag_name={TAG}" in args and f"target_commitish={SHA}" in args
+                assert "draft=true" in args and "prerelease=false" in args
+                self.existing_release(draft=True, names=[])
+                self.writes.append("create-draft")
                 value = json.dumps(self.release)
             elif endpoint.endswith(f"/releases/tags/{TAG}"):
                 # GitHub's by-tag REST endpoint cannot retrieve drafts.
@@ -171,6 +188,24 @@ class PublishReleaseTest(unittest.TestCase):
         self.assertEqual(len(self.fake.release["assets"]), 3)
         summary = Path(os.environ["GITHUB_STEP_SUMMARY"]).read_text()
         self.assertIn(URL, summary)
+
+    def test_first_run_uses_creation_response_when_release_list_stays_empty(self):
+        self.fake.stale_release_list = True
+        self.assertIn(URL, self.publish())
+        self.assertFalse(self.fake.release["draft"])
+        self.assertEqual(len(self.fake.release["assets"]), 3)
+        self.assertEqual(sum(command[1:3] == ["api", "graphql"] for command in self.fake.events), 1)
+
+    def test_graphql_errors_or_missing_repository_are_not_missing_release(self):
+        for response in ({"data": {"repository": None}},
+                         {"errors": [{"message": "forbidden"}], "data": {"repository": {"release": None}}},
+                         {"data": {"repository": {}}},
+                         {"data": {"repository": {"release": {"databaseId": None}}}}):
+            with self.subTest(response=response):
+                self.fake.graphql_response = response
+                with self.assertRaises(RuntimeError):
+                    self.publish()
+                self.assertEqual(self.fake.writes, [])
 
     def test_rejects_missing_asset_before_network(self):
         self.files[NAMES[0]].unlink()
@@ -266,7 +301,7 @@ class PublishReleaseTest(unittest.TestCase):
     def test_does_not_swallow_authentication_or_network_errors(self):
         for endpoint in (f"repos/{REPOSITORY}/git/ref/tags/{TAG}",
                          f"repos/{REPOSITORY}/commits/tags/{TAG}",
-                         f"repos/{REPOSITORY}/releases?per_page=100"):
+                         "graphql"):
             for message in ("gh: Bad credentials (HTTP 401)",
                             "gh: Validation failed (HTTP 422)", "dial tcp: timeout",
                             "proxy returned 404 without HTTP status"):

@@ -17,9 +17,9 @@ ARCHIVE = re.compile(
 PLATFORMS = {"macos-arm64", "windows-x64-mingw", "linux-x64"}
 
 
-def gh(*arguments, missing=False, output=None, input_text=None):
+def gh(*arguments, missing=False, output=None):
     result = subprocess.run(
-        ["gh", *arguments], env=os.environ.copy(), input=input_text,
+        ["gh", *arguments], env=os.environ.copy(),
         stdout=output if output is not None else subprocess.PIPE,
         stderr=subprocess.PIPE, text=True, check=False)
     if result.returncode:
@@ -32,19 +32,29 @@ def gh(*arguments, missing=False, output=None, input_text=None):
     return result.stdout.strip() if output is None else None
 
 
-def api(endpoint, *, missing=False):
-    result = gh("api", endpoint, missing=missing)
+def api(endpoint, *arguments, missing=False):
+    result = gh("api", endpoint, *arguments, missing=missing)
     return json.loads(result) if result is not None else None
 
 
 def find_release(repository, tag):
-    # The by-tag REST endpoint excludes drafts; authenticated lists include them.
-    pages = json.loads(gh("api", f"repos/{repository}/releases?per_page=100",
-                          "--paginate", "--slurp"))
-    matches = [release for page in pages for release in page if release["tag_name"] == tag]
-    if len(matches) > 1:
-        raise RuntimeError("Multiple releases have the requested tag")
-    return api(f"repos/{repository}/releases/{matches[0]['id']}") if matches else None
+    owner, name = repository.split("/")
+    query = ("query($owner: String!, $name: String!, $tag: String!) {"
+             " repository(owner: $owner, name: $name) { release(tagName: $tag) { databaseId } } }")
+    response = api("graphql", "-f", f"query={query}", "-f", f"owner={owner}",
+                   "-f", f"name={name}", "-f", f"tag={tag}")
+    if response.get("errors") or not isinstance(response.get("data"), dict):
+        raise RuntimeError("GraphQL release lookup failed")
+    result = response["data"].get("repository")
+    if not isinstance(result, dict) or "release" not in result:
+        raise RuntimeError("GraphQL repository lookup failed")
+    if result["release"] is None:
+        return None
+    release = result["release"]
+    release_id = release.get("databaseId") if isinstance(release, dict) else None
+    if type(release_id) is not int or release_id <= 0:
+        raise RuntimeError("GraphQL returned an invalid release ID")
+    return api(f"repos/{repository}/releases/{release_id}")
 
 
 def verify_assets(release, files, repository, *, complete):
@@ -105,12 +115,11 @@ def publish(directory):
     if release is None:
         notes = (f"SDK version: {version}\nCommit: {sha}\n\n"
                  f"Workflow run: https://github.com/{repository}/actions/runs/{values['GITHUB_RUN_ID']}\n")
-        gh("release", "create", tag, "--repo", repository, "--target", sha,
-           "--verify-tag", "--draft", "--title", f"xlog-codec {version} (build {values['GITHUB_RUN_NUMBER']})",
-           "--notes-file", "-", input_text=notes)
-        release = find_release(repository, tag)
-        if release is None:
-            raise RuntimeError("Created draft release was not returned by GitHub")
+        # Consume the creation response: list/lookup reads may lag a successful write.
+        release = api(f"repos/{repository}/releases", "--method", "POST",
+                      "-f", f"tag_name={tag}", "-f", f"target_commitish={sha}",
+                      "-f", f"name=xlog-codec {version} (build {values['GITHUB_RUN_NUMBER']})",
+                      "-f", f"body={notes}", "-F", "draft=true", "-F", "prerelease=false")
     release_endpoint = f"repos/{repository}/releases/{release['id']}"
     if release["tag_name"] != tag:
         raise RuntimeError("GitHub returned an unexpected release tag")
