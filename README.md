@@ -21,10 +21,10 @@ xlog 编解码工程。根 CMake 项目管理两个互不依赖的动态库：
 
 - CMake **4.2.2+**，Ninja **1.11+**（单配置）。
 - GNU GCC **16+**，C++26、`<meta>` 静态反射、`-freflection`。
-- macOS ARM64 或 Windows x64 MinGW/GCC **MSYS2 UCRT64**。
+- macOS ARM64、Windows x64 MinGW/GCC **MSYS2 UCRT64** 或 Linux x64。
 
 构建使用 CMake `FILE_SET CXX_MODULES` 跟踪私有模块，不要求 `import std`。
-默认 AppleClang、MSVC、Linux、Ninja Multi-Config 不在本阶段支持范围。
+默认 AppleClang、MSVC、其他架构、Ninja Multi-Config 不在支持范围。
 公开头文件和安装包的消费者不需要 C++26 或 Modules。
 
 ## macOS 构建
@@ -67,6 +67,28 @@ ctest --test-dir build/windows-x64-mingw-release --output-on-failure --no-tests=
 若 MSYS2 更新要求关闭终端，先完成更新再继续安装。GCC 必须达到 16；项目会在配置时检查反射能力。
 Debug 使用 `windows-x64-mingw-debug`。Windows CI 将运行同一 Release 构建与 CTest。
 
+## Linux 构建
+
+Linux x64 使用 GCC 16+、CMake 4.2.2+、Ninja 和匹配的 Crypto/zlib 开发包。
+默认 `linux-x64-release` preset 使用 PATH 中的 `gcc`、`g++`；也可覆盖编译器路径。
+CI 在 Ubuntu 24.04 上使用 Homebrew 提供的 GCC 16 和静态依赖：
+
+```sh
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+brew install gcc cmake ninja openssl@3 zlib
+cmake --preset linux-x64-release \
+  -DCMAKE_C_COMPILER=gcc-16 -DCMAKE_CXX_COMPILER=g++-16 \
+  -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)" \
+  -DOPENSSL_INCLUDE_DIR="$(brew --prefix openssl@3)/include" \
+  -DOPENSSL_CRYPTO_LIBRARY="$(brew --prefix openssl@3)/lib/libcrypto.a" \
+  -DZLIB_INCLUDE_DIR="$(brew --prefix zlib)/include" \
+  -DZLIB_LIBRARY="$(brew --prefix zlib)/lib/libz.a"
+cmake --build --preset linux-x64-release
+ctest --test-dir build/linux-x64-release --output-on-failure --no-tests=error
+```
+
+Debug 使用 `linux-x64-debug`。普通发行版也可使用自己的 GCC 16 和依赖，无需安装 Homebrew。
+
 ## 输出与独立安装
 
 普通构建直接生成动态库及完整交付目录：
@@ -74,13 +96,13 @@ Debug 使用 `windows-x64-mingw-debug`。Windows CI 将运行同一 Release 构�
 ```text
 <CMAKE_BINARY_DIR>/outputs/<平台>/<子项目名称>/
 ├── include/<子项目名称>/   # 配置、类型、API 与导出宏 .h
-├── lib/                  # dylib / Windows 导入库
+├── lib/                  # dylib / so / Windows 导入库
 ├── bin/                  # Windows DLL
 ├── cmake/                # Config.cmake / ConfigVersion.cmake
 └── doc/                  # 本库 API 说明与 OpenSSL/zlib 许可证
 ```
 
-平台标签为 `macos-arm64`、`windows-x64-mingw`。Debug/Release 使用不同构建目录，输出中不再增加配置层。
+平台标签为 `macos-arm64`、`windows-x64-mingw`、`linux-x64`。Debug/Release 使用不同构建目录，输出中不再增加配置层。
 单独构建任意一个库，同样得到该库的完整交付目录：
 
 ```sh
@@ -177,9 +199,11 @@ int main(void) {
 传 NULL options 使用库编译时默认值；修改配置头后，要使 NULL options 应用新默认值，需重新构建对应动态库。
 
 macOS 库使用 `@rpath` install name，外部 CMake target 提供对应链接位置。
+Linux 库使用版本化 SONAME 和 `$ORIGIN` 安装 RPATH；CMake target 使调用程序定位搬迁后的包。
 Windows 运行时将本包 `bin` 加入 PATH；同时需要匹配的 GCC 运行库。
 若显式选择动态 Crypto/zlib，宿主环境还须提供对应动态库。工程不复制 Windows 依赖运行库，
-不静态捆绑 GCC 运行库，也不承诺未经验证的旧版 macOS 兼容性。
+不静态捆绑 GCC 运行库。Unix 宿主需提供匹配的 GCC 运行库；Linux 还需兼容构建环境的 glibc，
+不承诺未经验证的旧版 macOS 或 Linux 发行版兼容性。
 
 CTest 验证 C/C++11 调用、交付目录移动后的消费、单库构建、头文件和文档增量同步，以及 build/install 文件清单和内容一致性。
 macOS 还检查实际加载的 dylib 路径。
@@ -188,8 +212,28 @@ macOS 还检查实际加载的 dylib 路径。
 
 ## 持续集成
 
-推送 `main`、向 `main` 提交 PR 或手动触发时，GitHub Actions 使用
-`windows-2025` 与 MSYS2 UCRT64 运行 Windows Release 配置、构建、产物布局检查和完整 CTest。
-CI 显式启用 `XLOG_BUILD_EXAMPLES=ON`，同时验证使用默认密钥对的加密往返示例。
-工作流记录实际 GCC/CMake/Ninja 版本；未达到工具链最低要求时配置会失败。
-可在仓库 Actions 页面查看运行结果。
+推送 `main`、向 `main` 提交 PR 或手动触发时，[Release SDKs 工作流](.github/workflows/build.yml)
+分别在 `macos-15` ARM64、`windows-2025` UCRT64 x64、`ubuntu-24.04` x64 上构建 Release。
+两个库、默认密钥加密往返示例和完整 CTest 均参与构建验证；CI 检查静态 Crypto/zlib 和两个库互不依赖。
+工作流记录实际 GCC/CMake/Ninja 版本，工具链与依赖来源见[调研记录](docs/research/2026-10-20-ci-toolchains.md)。
+
+每次向 `main` 推送，或在 `main` 手动运行工作流，成功后会上传三个 Actions artifact：
+
+| Artifact | 包内 ZIP（当前版本） |
+| --- | --- |
+| `xlog-codec-macos-arm64` | `xlog-codec-0.1.0-macos-arm64.zip` |
+| `xlog-codec-windows-x64-mingw` | `xlog-codec-0.1.0-windows-x64-mingw.zip` |
+| `xlog-codec-linux-x64` | `xlog-codec-0.1.0-linux-x64.zip` |
+
+ZIP 根目录包含 `xlog_encode/`、`xlog_decode/`，各有公开头、动态库、CMake 配置和 API 文档及许可证。
+打包后会重新解压，核对文件清单和库别名，并分别编译、运行两个独立 SDK 的 C/C++11 调用程序；验证通过才上传。
+PR 同样构建、测试和验证 ZIP，上传仅对 main 的推送或手动运行启用。可从仓库 Actions 运行页下载产物。
+
+本地可在完成两个库的 Release 构建后执行相同打包脚本，版本号自动取自构建 cache：
+
+```sh
+cmake -DXLOG_BUILD_DIR=build/macos-arm64-release \
+  -DXLOG_PLATFORM=macos-arm64 -P cmake/PackageRelease.cmake
+```
+
+ZIP 输出到对应构建目录的 `dist/`，不包含 example、测试或私有 Modules。

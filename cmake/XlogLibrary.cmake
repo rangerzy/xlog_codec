@@ -30,6 +30,8 @@ function(xlog_configure_library project_name export_name)
         set_target_properties(${project_name} PROPERTIES
             INSTALL_NAME_DIR "@rpath" BUILD_WITH_INSTALL_NAME_DIR YES
             BUILD_WITH_INSTALL_RPATH YES)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set_target_properties(${project_name} PROPERTIES INSTALL_RPATH "$ORIGIN")
     endif()
 
     # One relocatable Config is used by both build output and installation.
@@ -38,9 +40,12 @@ function(xlog_configure_library project_name export_name)
         set(runtime_directory bin)
         set(link_property IMPORTED_IMPLIB)
         set(link_value "\${PACKAGE_PREFIX_DIR}/lib/$<TARGET_LINKER_FILE_NAME:${project_name}>")
-    else()
+    elseif(APPLE)
         set(link_property IMPORTED_SONAME)
         set(link_value "@rpath/$<TARGET_SONAME_FILE_NAME:${project_name}>")
+    else()
+        set(link_property IMPORTED_SONAME)
+        set(link_value "$<TARGET_SONAME_FILE_NAME:${project_name}>")
     endif()
     configure_package_config_file("${CMAKE_CURRENT_FUNCTION_LIST_DIR}/LibraryConfig.cmake.in"
         "${generated}/${project_name}Config.cmake.in"

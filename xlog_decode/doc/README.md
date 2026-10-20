@@ -107,5 +107,7 @@ target_link_libraries(your_app PRIVATE xlog::decode)
 
 将本包根目录加入 `CMAKE_PREFIX_PATH`。头文件在 `include`，CMake package 在 `cmake`，动态库在
 `lib`（Windows DLL 在 `bin`，导入库在 `lib`）。构建本库 target 即生成完整交付目录。
-Windows 运行时仍需匹配的 UCRT64 GCC 运行库，macOS 仍需匹配的 GCC 运行库。
+分发平台为 macOS ARM64、Windows UCRT64 x64 和 Linux x64。Windows 运行时需使本包 `bin` 和匹配的
+UCRT64 GCC 运行库可被系统找到；macOS/Linux 仍需匹配的 GCC 运行库，Linux 还需兼容构建环境的 glibc。
+Linux 库使用版本化 SONAME 和 `$ORIGIN` 安装 RPATH；CMake package 可在 SDK 搬迁后使用。
 若显式选择动态 Crypto/zlib，宿主环境还须提供对应动态库。

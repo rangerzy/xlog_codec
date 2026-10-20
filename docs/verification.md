@@ -247,3 +247,16 @@ Windows 验证：[run 39218534706](https://github.com/rangerzy/xlog_codec/action
   完整 xlog 比原文减少 124039 字节。单独重组打印的 hex，验证全部 7033 字节、magic、payload 长度和结束标记；
   同时按长度提取全部原文与解码输出，逐字节相同。
 - Debug、Release、CLion RelWithDebInfo 的 `example` 均构建通过；Debug、Release 的 `example_roundtrip` 各 **1/1** 通过。
+
+## 三平台 Release 分发（2026-10-20）
+
+- 128 KiB 示例修改已通过提交 `530ef41` 推送至 main；对应 [Windows CI](https://github.com/rangerzy/xlog_codec/actions/runs/39353683456)
+  已成功完成 Release 构建、静态依赖检查和全部 **14/14** CTest。
+- 新增 Linux x64 平台与 Debug/Release presets；Linux 包使用版本化 SONAME 和 `$ORIGIN` 安装 RPATH。
+- 新工作流为 macOS ARM64、Windows UCRT64 x64、Linux x64 分别构建两个库的 Release SDK，
+  在 main 推送或 main 手动触发时上传三个平台 ZIP；PR 构建执行相同验证。
+- 本机从仅含项目源文件的临时副本全新配置 macOS ARM64 Release，构建及 **14/14** CTest 通过。
+  `PackageRelease.cmake` 生成 ZIP 后重新解压，校验精确文件清单和库别名，两个独立 SDK 的 C/C++11
+  调用程序均编译、运行通过。工作目录中已有的 `* 2.*` 副本未改动或加入提交。
+- ZIP 只包含两个独立 SDK 的公开头、动态库、CMake package、API 文档及许可证；版本取自构建 cache。
+  新三平台远程运行结果与产物以 [Release SDKs 工作流](https://github.com/rangerzy/xlog_codec/actions/workflows/build.yml) 为准。

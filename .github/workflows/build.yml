@@ -1,4 +1,4 @@
-name: Build and test
+name: Release SDKs
 
 on:
   push:
@@ -11,8 +11,97 @@ permissions:
   contents: read
 
 jobs:
+  unix:
+    name: ${{ matrix.platform }} Release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: macos-arm64
+            preset: macos-arm64-release
+          - runner: ubuntu-24.04
+            platform: linux-x64
+            preset: linux-x64-release
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      XLOG_PLATFORM: ${{ matrix.platform }}
+      XLOG_PRESET: ${{ matrix.preset }}
+      CC: gcc-16
+      CXX: g++-16
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install GCC 16 and static dependencies
+        run: |
+          if [[ "$RUNNER_OS" == Linux ]]; then
+            eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          fi
+          brew update
+          brew install gcc cmake ninja openssl@3 zlib
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+      - name: Record toolchain
+        run: |
+          uname -sm
+          gcc-16 --version
+          g++-16 --version
+          cmake --version
+          ninja --version
+          brew list --versions gcc cmake ninja openssl@3 zlib
+      - name: Configure Release
+        run: |
+          crypto_prefix="$(brew --prefix openssl@3)"
+          zlib_prefix="$(brew --prefix zlib)"
+          test -f "$crypto_prefix/lib/libcrypto.a"
+          test -f "$zlib_prefix/lib/libz.a"
+          cmake --preset "$XLOG_PRESET" \
+            -DCMAKE_C_COMPILER=gcc-16 -DCMAKE_CXX_COMPILER=g++-16 \
+            -DOPENSSL_USE_STATIC_LIBS=TRUE -DZLIB_USE_STATIC_LIBS=TRUE \
+            -DOPENSSL_ROOT_DIR="$crypto_prefix" \
+            -DOPENSSL_INCLUDE_DIR="$crypto_prefix/include" \
+            -DOPENSSL_CRYPTO_LIBRARY="$crypto_prefix/lib/libcrypto.a" \
+            -DZLIB_INCLUDE_DIR="$zlib_prefix/include" \
+            -DZLIB_LIBRARY="$zlib_prefix/lib/libz.a" \
+            -DXLOG_BUILD_ENCODE=ON -DXLOG_BUILD_DECODE=ON \
+            -DXLOG_BUILD_EXAMPLES=ON -DBUILD_TESTING=ON
+      - name: Build libraries, example and tests
+        run: cmake --build --preset "$XLOG_PRESET" --parallel 3
+      - name: Check codec runtime dependencies
+        run: |
+          for project in xlog_encode xlog_decode; do
+            prefix="build/$XLOG_PRESET/outputs/$XLOG_PLATFORM/$project"
+            if [[ "$RUNNER_OS" == macOS ]]; then
+              dependencies="$(otool -L "$prefix/lib/lib${project}.dylib" | tail -n +2)"
+            else
+              dependencies="$(readelf -d "$prefix/lib/lib${project}.so" | sed -n '/(NEEDED)/p')"
+            fi
+            printf '%s\n' "$dependencies"
+            if printf '%s\n' "$dependencies" | grep -Ei '(libcrypto|libssl|libz[.]|libxlog_(encode|decode))'; then
+              echo "Each SDK must use static Crypto/zlib and remain independently usable"
+              exit 1
+            fi
+          done
+      - name: Test C ABI and relocated packages
+        run: ctest --test-dir "build/$XLOG_PRESET" --output-on-failure --no-tests=error
+      - name: Package and verify extracted Release SDKs
+        run: |
+          cmake -DXLOG_BUILD_DIR="build/$XLOG_PRESET" \
+            -DXLOG_PLATFORM="$XLOG_PLATFORM" -P cmake/PackageRelease.cmake
+      - name: Upload platform ZIP
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v7
+        with:
+          name: xlog-codec-${{ matrix.platform }}
+          path: build/${{ matrix.preset }}/dist/*.zip
+          if-no-files-found: error
+          compression-level: 0
+
   windows:
-    name: Windows x64 UCRT64 GCC 16
+    name: windows-x64-mingw Release
     runs-on: windows-2025
     timeout-minutes: 20
     defaults:
@@ -38,8 +127,18 @@ jobs:
           ninja --version
           pacman -Q mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
           pacman -Q mingw-w64-ucrt-x86_64-openssl mingw-w64-ucrt-x86_64-zlib
-      - name: Configure
-        run: cmake --preset windows-x64-mingw-release -DXLOG_BUILD_EXAMPLES=ON
+      - name: Configure Release
+        run: |
+          dependency_prefix="$(cygpath -m /ucrt64)"
+          cmake --preset windows-x64-mingw-release \
+            -DOPENSSL_USE_STATIC_LIBS=TRUE -DZLIB_USE_STATIC_LIBS=TRUE \
+            -DOPENSSL_ROOT_DIR="$dependency_prefix" \
+            -DOPENSSL_INCLUDE_DIR="$dependency_prefix/include" \
+            -DOPENSSL_CRYPTO_LIBRARY="$dependency_prefix/lib/libcrypto.a" \
+            -DZLIB_INCLUDE_DIR="$dependency_prefix/include" \
+            -DZLIB_LIBRARY="$dependency_prefix/lib/libz.a" \
+            -DXLOG_BUILD_ENCODE=ON -DXLOG_BUILD_DECODE=ON \
+            -DXLOG_BUILD_EXAMPLES=ON -DBUILD_TESTING=ON
       - name: Build libraries, example and tests
         run: cmake --build --preset windows-x64-mingw-release
       - name: Check DLL and import library layout
@@ -75,3 +174,15 @@ jobs:
           done
       - name: Test C ABI and relocated packages
         run: ctest --test-dir build/windows-x64-mingw-release --output-on-failure --no-tests=error
+      - name: Package and verify extracted Release SDKs
+        run: |
+          cmake -DXLOG_BUILD_DIR=build/windows-x64-mingw-release \
+            -DXLOG_PLATFORM=windows-x64-mingw -P cmake/PackageRelease.cmake
+      - name: Upload platform ZIP
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v7
+        with:
+          name: xlog-codec-windows-x64-mingw
+          path: build/windows-x64-mingw-release/dist/*.zip
+          if-no-files-found: error
+          compression-level: 0

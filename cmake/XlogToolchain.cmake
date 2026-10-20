@@ -18,8 +18,11 @@ if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$"
 elseif(WIN32 AND MINGW AND CMAKE_SIZEOF_VOID_P EQUAL 8
        AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|X86_64)$")
     set(XLOG_PLATFORM windows-x64-mingw)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SIZEOF_VOID_P EQUAL 8
+       AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|X86_64)$")
+    set(XLOG_PLATFORM linux-x64)
 else()
-    message(FATAL_ERROR "Supported platforms: macOS ARM64 GCC, Windows x64 MinGW GCC (UCRT64).")
+    message(FATAL_ERROR "Supported platforms: macOS ARM64 GCC, Windows x64 MinGW GCC (UCRT64), Linux x64 GCC.")
 endif()
 
 include(CheckCXXSourceCompiles)
