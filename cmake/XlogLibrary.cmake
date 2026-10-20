@@ -31,7 +31,8 @@ function(xlog_configure_library project_name export_name)
             INSTALL_NAME_DIR "@rpath" BUILD_WITH_INSTALL_NAME_DIR YES
             BUILD_WITH_INSTALL_RPATH YES)
     elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        set_target_properties(${project_name} PROPERTIES INSTALL_RPATH "$ORIGIN")
+        set_target_properties(${project_name} PROPERTIES
+            INSTALL_RPATH "$ORIGIN" BUILD_WITH_INSTALL_RPATH YES)
     endif()
 
     # One relocatable Config is used by both build output and installation.
