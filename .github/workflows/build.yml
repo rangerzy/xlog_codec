@@ -202,6 +202,9 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: write
+    concurrency:
+      group: xlog-codec-release-main
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
       - name: Collect verified platform ZIPs

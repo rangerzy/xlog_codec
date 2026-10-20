@@ -242,10 +242,11 @@ CI 会自动在 [GitHub Releases](https://github.com/rangerzy/xlog_codec/release
 | Windows x64 UCRT64 | `xlog-codec-0.1.0-windows-x64-mingw.zip` |
 | Linux x64 | `xlog-codec-0.1.0-linux-x64.zip` |
 
-Release 标签使用 `v<版本>-build.<工作流构建号>`，例如 `v0.1.0-build.20`，精确指向该次构建的提交。
-每次新构建保留一个独立 Release；重试发布任务时复用该次构建的标签和 Actions artifacts，校验提交及已有附件。
-已有同名附件的内容若与构建产物不同，会停止发布，不覆盖历史产物。
-发布先创建草稿，三个附件上传并校验完整后才正式发布并标为 Latest。
+Release 标签直接使用 `v<项目版本>`，当前为 `v0.1.0`，标题为 `xlog-codec 0.1.0`。
+同一版本始终更新同一个 Release 和三个 ZIP 附件，标签同步指向最新成功构建的提交；修改项目版本后创建新 Release。
+Release notes 包含当前提交的完整 SHA、提交主题、作者、提交日期和链接；同版本更新还列出两次发布之间的提交。
+发布任务串行执行，并检查提交先后关系，防止较早构建晚完成时覆盖较新的分发包。
+首次发布先创建草稿；更新时先转为草稿，替换并校验三个附件后正式发布为 Latest，发布中断可继续恢复。
 
 ZIP 根目录包含 `xlog_encode/`、`xlog_decode/`，各有公开头、动态库、CMake 配置和 API 文档及许可证。
 打包后会重新解压，核对文件清单和库别名，并分别编译、运行两个独立 SDK 的 C/C++11 调用程序；验证通过才上传。
