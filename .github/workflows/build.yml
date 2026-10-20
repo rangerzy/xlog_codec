@@ -36,6 +36,9 @@ jobs:
       HOMEBREW_NO_INSTALL_CLEANUP: 1
     steps:
       - uses: actions/checkout@v7
+      - name: Test Release publishing logic
+        if: matrix.platform == 'linux-x64'
+        run: python3 -B -m unittest discover -s tests -p test_publish_release.py
       - name: Install GCC 16 and static dependencies
         run: |
           if [[ "$RUNNER_OS" == Linux ]]; then
@@ -190,3 +193,24 @@ jobs:
           path: build/windows-x64-mingw-release/dist/*.zip
           if-no-files-found: error
           compression-level: 0
+
+  release:
+    name: Publish GitHub Release
+    needs: [unix, windows]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Collect verified platform ZIPs
+        uses: actions/download-artifact@v8
+        with:
+          pattern: xlog-codec-*
+          merge-multiple: true
+          path: release-assets
+      - name: Publish the three SDK ZIPs to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/publish_release.py release-assets

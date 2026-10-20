@@ -226,24 +226,31 @@ git push origin main
 git switch dev
 ```
 
-直接推送 `dev` 不触发 Release 工作流；向 `main` 提交 PR 时会构建和验证，合并并推送 `main` 后上传分发包。
+直接推送 `dev` 不触发 Release 工作流；向 `main` 提交 PR 时会构建和验证，合并并推送 `main` 后自动发布 GitHub Release。
 
 推送 `main`、向 `main` 提交 PR 或手动触发时，[Release SDKs 工作流](.github/workflows/build.yml)
 分别在 `macos-15` ARM64、`windows-2025` UCRT64 x64、`ubuntu-24.04` x64 上构建 Release。
 两个库、默认密钥加密往返示例和完整 CTest 均参与构建验证；CI 检查静态 Crypto/zlib 和两个库互不依赖。
 工作流记录实际 GCC/CMake/Ninja 版本，工具链与依赖来源见[调研记录](docs/research/2026-10-20-ci-toolchains.md)。
 
-每次向 `main` 推送，或在 `main` 手动运行工作流，成功后会上传三个 Actions artifact：
+每次向 `main` 推送，或在 `main` 手动运行工作流，三个平台全部构建、测试和打包成功后，
+CI 会自动在 [GitHub Releases](https://github.com/rangerzy/xlog_codec/releases) 创建 Release，附上三个分发 ZIP：
 
-| Artifact | 包内 ZIP（当前版本） |
+| 平台 | Release 附件（当前版本） |
 | --- | --- |
-| `xlog-codec-macos-arm64` | `xlog-codec-0.1.0-macos-arm64.zip` |
-| `xlog-codec-windows-x64-mingw` | `xlog-codec-0.1.0-windows-x64-mingw.zip` |
-| `xlog-codec-linux-x64` | `xlog-codec-0.1.0-linux-x64.zip` |
+| macOS ARM64 | `xlog-codec-0.1.0-macos-arm64.zip` |
+| Windows x64 UCRT64 | `xlog-codec-0.1.0-windows-x64-mingw.zip` |
+| Linux x64 | `xlog-codec-0.1.0-linux-x64.zip` |
+
+Release 标签使用 `v<版本>-build.<工作流构建号>`，例如 `v0.1.0-build.20`，精确指向该次构建的提交。
+每次新构建保留一个独立 Release；重试发布任务时复用该次构建的标签和 Actions artifacts，校验提交及已有附件。
+已有同名附件的内容若与构建产物不同，会停止发布，不覆盖历史产物。
+发布先创建草稿，三个附件上传并校验完整后才正式发布并标为 Latest。
 
 ZIP 根目录包含 `xlog_encode/`、`xlog_decode/`，各有公开头、动态库、CMake 配置和 API 文档及许可证。
 打包后会重新解压，核对文件清单和库别名，并分别编译、运行两个独立 SDK 的 C/C++11 调用程序；验证通过才上传。
-PR 同样构建、测试和验证 ZIP，上传仅对 main 的推送或手动运行启用。可从仓库 Actions 运行页下载产物。
+Actions artifacts 用于在 CI 构建任务和发布任务之间传递 ZIP，整个发布流程在 GitHub 上完成。
+直接从 Release 页下载附件即可；PR 只执行构建和验证，不发布 Release。
 
 本地可在完成两个库的 Release 构建后执行相同打包脚本，版本号自动取自构建 cache：
 
