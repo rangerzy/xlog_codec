@@ -212,6 +212,22 @@ macOS 还检查实际加载的 dylib 路径。
 
 ## 持续集成
 
+日常开发在 `dev` 分支进行，本地 `dev` 跟踪 `origin/dev`，完成修改后推送 `dev`。
+需要发布分发包时，将 `dev` 合并到 `main` 并推送，触发三平台 Release 构建；完成后切回 `dev` 继续开发：
+
+```sh
+git switch dev
+# 开发、验证并提交修改后
+git push origin dev
+git switch main
+git pull --ff-only origin main
+git merge --ff-only dev
+git push origin main
+git switch dev
+```
+
+直接推送 `dev` 不触发 Release 工作流；向 `main` 提交 PR 时会构建和验证，合并并推送 `main` 后上传分发包。
+
 推送 `main`、向 `main` 提交 PR 或手动触发时，[Release SDKs 工作流](.github/workflows/build.yml)
 分别在 `macos-15` ARM64、`windows-2025` UCRT64 x64、`ubuntu-24.04` x64 上构建 Release。
 两个库、默认密钥加密往返示例和完整 CTest 均参与构建验证；CI 检查静态 Crypto/zlib 和两个库互不依赖。
